@@ -1,0 +1,244 @@
+{% extends 'chat/base.html' %}
+
+{% block content %}
+<div class="chat-container">
+    <button class="mobile-menu-button" onclick="toggleMobileMenu()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+
+    <div class="users-list" id="usersList">
+        <h2 class="text-white">Conversations</h2>
+        <div class="users-menu">
+            {% for user in users %}
+            <div class="user-item {% if user.username == other_user.username %}active{% endif %}">
+                <a href="{% url 'chat_room' user.username %}">
+                    <div class="user-avatar">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ user.username }}</div>
+                        <div class="user-status">
+                            {% if user.is_online %}Online{% else %}Offline{% endif %}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            <div class="user-avatar">
+                {{ other_user.username|make_list|first|upper }}
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ other_user.username }}</div>
+                <div class="user-status">
+                    {% if other_user.is_online %}Online{% else %}Last seen recently{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="messages" id="messages">
+            {% for message in messages %}
+            <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}" data-message-id="{{ message.id }}">
+                <div class="message-content">{{ message.content }}</div>
+                <div class="message-info">
+                    <span class="message-timestamp">{{ message.timestamp|date:"H:i" }}</span>
+                    {% if message.sender == request.user %}
+                        <span class="message-status">
+                            {% if message.is_read %}
+                                <span class="status-icon status-read">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 2l-5 5-3-3"/>
+                                        <path d="M22 2l-5 5-3-3"/>
+                                    </svg>
+                                </span>
+                            {% else %}
+                                <span class="status-icon status-delivered">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                </span>
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="message-input">
+            <div class="input-container">
+                <button class="action-button text-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                </button>
+                <input type="text" id="chat-message-input" placeholder="Type your message..." class="text-white">
+                <button class="action-button text-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    </svg>
+                </button>
+                <button id="chat-message-submit" class="send-button text-white">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+    // Get the current users from Django context
+    const currentUser = "{{ request.user.username }}";
+    const otherUser = "{{ other_user.username }}";
+
+    // Create WebSocket connection
+    const roomName = `${currentUser}_${otherUser}`;
+    const chatSocket = new WebSocket(
+        `ws://${window.location.host}/ws/chat/${roomName}/`
+    );
+
+    // Get DOM elements
+    const messagesContainer = document.getElementById('messages');
+    const messageInput = document.getElementById('chat-message-input');
+    const sendButton = document.getElementById('chat-message-submit');
+
+    // Handle WebSocket connection open
+    chatSocket.onopen = function(e) {
+        console.log('WebSocket connection established');
+    };
+
+    // Handle WebSocket errors
+    chatSocket.onerror = function(e) {
+        console.error('WebSocket error:', e);
+    };
+
+    // Handle WebSocket messages
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        console.log('Received message:', data);
+
+        const messageElement = createMessageElement(
+            data.message,
+            data.sender,
+            data.message_id,
+            data.timestamp
+        );
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        // If we received a message, mark it as read
+        if (data.sender !== currentUser) {
+            markMessageAsRead(data.message_id);
+        }
+    };
+
+    // Create message element function
+    function createMessageElement(message, sender, messageId, timestamp) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender === currentUser ? 'sent' : 'received'}`;
+        messageDiv.setAttribute('data-message-id', messageId);
+
+        messageDiv.innerHTML = `
+            <div class="message-content">${message}</div>
+            <div class="message-info">
+                <span class="message-timestamp">${timestamp}</span>
+                ${sender === currentUser ? `
+                    <span class="message-status">
+                        <span class="status-icon status-sent">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </span>
+                    </span>
+                ` : ''}
+            </div>
+        `;
+
+        return messageDiv;
+    }
+
+    // Send message function
+    function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message && chatSocket.readyState === WebSocket.OPEN) {
+            const messageData = {
+                message: message,
+                receiver: otherUser
+            };
+            console.log('Sending message:', messageData);
+            chatSocket.send(JSON.stringify(messageData));
+            messageInput.value = '';
+            messageInput.focus();
+        }
+    }
+
+    // Handle Enter key press
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Prevent default to avoid newline
+            sendMessage();
+        }
+    });
+
+    // Handle send button click
+    sendButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+
+    // Get CSRF token function
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Mark message as read function
+    function markMessageAsRead(messageId) {
+        fetch(`/api/messages/${messageId}/read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+
+    // Add scroll to bottom when new messages arrive
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Send button animation
+    sendButton.addEventListener('mousedown', function() {
+        this.style.transform = 'scale(0.95)';
+    });
+
+    sendButton.addEventListener('mouseup', function() {
+        this.style.transform = 'scale(1)';
+    });
+
+    // Close socket when page is unloaded
+    window.addEventListener('beforeunload', function() {
+        chatSocket.close();
+    });
+</script>

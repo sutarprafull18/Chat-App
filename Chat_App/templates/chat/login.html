@@ -1,0 +1,106 @@
+{% extends 'chat/base.html' %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2 class="text-2xl font-bold mb-6 text-center text-white">Login</h2>
+
+        {% if messages %}
+        <div class="messages mb-4">
+            {% for message in messages %}
+            <div class="p-3 rounded {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-500{% endif %} text-white mb-2">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            <div class="mb-4">
+                <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-white mb-1">
+                    Username
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div class="text-red-500 text-sm mt-1">
+                    {{ form.username.errors.0 }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mb-6">
+                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-white mb-1">
+                    Password
+                </label>
+                <div class="password-input-container">
+                    {{ form.password }}
+                    <button type="button" class="password-toggle" onclick="togglePassword('id_password')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                {% if form.password.errors %}
+                <div class="text-red-500 text-sm mt-1">
+                    {{ form.password.errors.0 }}
+                </div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 px-4 rounded-md hover:from-blue-600 hover:to-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
+                Login
+            </button>
+
+            <div class="mt-4 text-center text-white">
+                Don't have an account?
+                <a href="{% url 'register' %}" class="text-blue-400 hover:text-blue-300">Register here</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    const icon = button.querySelector('svg');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = `
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+        `;
+    } else {
+        input.type = 'password';
+        icon.innerHTML = `
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+        `;
+    }
+}
+
+// Style the form inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+    inputs.forEach(input => {
+        input.classList.add(
+            'w-full',
+            'px-3',
+            'py-2',
+            'bg-opacity-10',
+            'bg-white',
+            'border',
+            'border-gray-600',
+            'rounded-md',
+            'focus:outline-none',
+            'focus:border-blue-500',
+            'text-white'
+        );
+    });
+});
+</script>
+{% endblock %}

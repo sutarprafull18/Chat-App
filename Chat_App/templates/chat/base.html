@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="main-nav">
+        <div class="nav-content">
+            <a href="{% url 'home' %}" class="text-white text-3xl font-bold tracking-tight hover:text-blue-400 transition-colors">Chat App</a>
+            {% if user.is_authenticated %}
+                <div class="flex items-center gap-4">
+                    <span class="text-white">{{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="text-white hover:text-gray-200">Logout</a>
+                </div>
+            {% else %}
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'login' %}" class="text-white hover:text-gray-200">Login</a>
+                    <a href="{% url 'register' %}" class="text-white hover:text-gray-200">Register</a>
+                </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>
+

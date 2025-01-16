@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="search-results">
+    <div class="search-header">
+        <h2>Search Results for "{{ query }}"</h2>
+        <a href="{% url 'chat_home' %}" class="back-button">Back to Chat</a>
+    </div>
+    
+    {% if users %}
+        <div class="users-list">
+            {% for user in users %}
+            <div class="user-item">
+                <a href="{% url 'chat_room' user.username %}" class="user-link">
+                    <div class="user-avatar">
+                        {{ user.username|make_list|first|upper }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ user.username }}</div>
+                        {% if user.unread_count %}
+                            <div class="unread-badge">{{ user.unread_count }}</div>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-results">
+            {% if query %}
+                <p>No users found matching "{{ query }}"</p>
+            {% else %}
+                <p>Start typing to search for users</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .search-results {
+        padding: 2rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .search-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .search-header h2 {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .back-button {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .back-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        color: #fff;
+    }
+
+    .unread-badge {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
